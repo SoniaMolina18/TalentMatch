@@ -25,6 +25,9 @@ public class TalentMatchDbContext : DbContext
     public DbSet<ProyectoHabilidad> ProyectoHabilidades { get; set; }
     public DbSet<ProyectoInteres> ProyectoIntereses { get; set; }
     public DbSet<MiembroEquipo> MiembrosEquipo { get; set; }
+    public DbSet<InvitacionEquipo> InvitacionesEquipo { get; set; }
+    public DbSet<Conversacion> Conversaciones { get; set; }
+    public DbSet<Mensaje> Mensajes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -97,12 +100,19 @@ public class TalentMatchDbContext : DbContext
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Titulo).IsRequired().HasMaxLength(200);
             entity.Property(p => p.Descripcion).IsRequired().HasMaxLength(2000);
-            entity.Property(p => p.FechaLimite).IsRequired();
+            entity.Property(p => p.FechaLimite).IsRequired(false);
             entity.Property(p => p.CuposDisponibles).IsRequired();
+            entity.Property(p => p.Tipo).IsRequired();
+            entity.Property(p => p.Objetivo).HasMaxLength(2000);
             entity.HasOne(p => p.Profesor)
                 .WithMany(prof => prof.Proyectos)
                 .HasForeignKey(p => p.ProfesorId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+            entity.HasOne(p => p.CreadorEstudiante)
+                .WithMany(e => e.ProyectosCreados)
+                .HasForeignKey(p => p.CreadorEstudianteId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Equipo>(entity =>
@@ -113,6 +123,10 @@ public class TalentMatchDbContext : DbContext
                 .WithMany(p => p.Equipos)
                 .HasForeignKey(e => e.ProyectoId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.LiderEstudiante)
+                .WithMany(e => e.EquiposLiderados)
+                .HasForeignKey(e => e.LiderEstudianteId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Postulacion>(entity =>
@@ -126,7 +140,7 @@ public class TalentMatchDbContext : DbContext
             entity.HasOne(p => p.Proyecto)
                 .WithMany(p => p.Postulaciones)
                 .HasForeignKey(p => p.ProyectoId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(p => new { p.EstudianteId, p.ProyectoId }).IsUnique();
         });
 
@@ -140,7 +154,7 @@ public class TalentMatchDbContext : DbContext
             entity.HasOne(r => r.Proyecto)
                 .WithMany(p => p.Recomendaciones)
                 .HasForeignKey(r => r.ProyectoId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
             entity.Property(r => r.PorcentajeCompatibilidad).HasColumnType("decimal(5,2)");
         });
 
@@ -222,8 +236,46 @@ public class TalentMatchDbContext : DbContext
             entity.HasOne(me => me.Estudiante)
                 .WithMany(e => e.MiembrosEquipo)
                 .HasForeignKey(me => me.EstudianteId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(me => new { me.EquipoId, me.EstudianteId }).IsUnique();
+        });
+
+        modelBuilder.Entity<InvitacionEquipo>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Mensaje).HasMaxLength(1000);
+            entity.HasOne(i => i.Equipo)
+                .WithMany()
+                .HasForeignKey(i => i.EquipoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(i => i.RemitenteUsuario)
+                .WithMany()
+                .HasForeignKey(i => i.RemitenteUsuarioId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(i => i.DestinatarioUsuario)
+                .WithMany()
+                .HasForeignKey(i => i.DestinatarioUsuarioId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasIndex(i => new { i.EquipoId, i.DestinatarioUsuarioId })
+                .IsUnique()
+                .HasFilter("[Estado] = 1");
+        });
+
+        modelBuilder.Entity<Conversacion>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.HasIndex(c => new { c.UsuarioAId, c.UsuarioBId }).IsUnique();
+            entity.ToTable("Conversaciones", table => table.HasCheckConstraint("CK_Conversaciones_Usuarios_Orden", "[UsuarioAId] < [UsuarioBId]"));
+            entity.HasOne(c => c.UsuarioA).WithMany().HasForeignKey(c => c.UsuarioAId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.UsuarioB).WithMany().HasForeignKey(c => c.UsuarioBId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Mensaje>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Contenido).IsRequired().HasMaxLength(2000);
+            entity.HasOne(m => m.Conversacion).WithMany(c => c.Mensajes).HasForeignKey(m => m.ConversacionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Remitente).WithMany().HasForeignKey(m => m.RemitenteId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

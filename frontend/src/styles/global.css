@@ -1,0 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-brand-darkest: #0B3D2E;
+  --color-brand-dark: #176B45;
+  --color-brand-main: #29A66A;
+  --color-brand-light: #D1F2E2;
+  --color-brand-bg: #F7FAF8;
+}
+
+html, body, #root { min-height: 100%; }
+body { margin: 0; min-width: 320px; font-family: 'Inter', sans-serif; background: #F7FAF8; color: #111827; }
+* { scrollbar-width: thin; scrollbar-color: #29A66A transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-thumb { background: #29A66A; border-radius: 20px; }

@@ -18,7 +18,11 @@ public class JwtService
 
     public string GenerateToken(Usuario usuario)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "default-secret-key-1234567890"));
+        var configuredKey = _configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(configuredKey))
+            throw new InvalidOperationException("La configuración Jwt:Key no está definida.");
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuredKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]

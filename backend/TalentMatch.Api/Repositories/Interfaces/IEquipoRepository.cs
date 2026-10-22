@@ -10,4 +10,5 @@ public interface IEquipoRepository
     Task<MiembroEquipo?> GetMiembroAsync(int equipoId, int estudianteId);
     Task AddMiembroAsync(MiembroEquipo miembroEquipo);
     Task<IEnumerable<Equipo>> GetByProyectoIdAsync(int proyectoId);
+    Task<IEnumerable<Equipo>> GetByUsuarioIdAsync(int usuarioId, string role);
 }

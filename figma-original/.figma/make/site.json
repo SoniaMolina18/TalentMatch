@@ -1,0 +1,10 @@
+{
+  "description": "Connects students with academic projects based on skills and interests, enhancing collaboration and compatibility through a user-friendly dashboard.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

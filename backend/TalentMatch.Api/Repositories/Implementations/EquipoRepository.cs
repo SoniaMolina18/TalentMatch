@@ -20,6 +20,11 @@ public class EquipoRepository : IEquipoRepository
             .Include(e => e.Miembros)
             .ThenInclude(m => m.Estudiante)
             .ThenInclude(est => est.Usuario)
+            .Include(e => e.LiderEstudiante)
+                .ThenInclude(est => est!.Usuario)
+            .Include(e => e.Proyecto)
+            .ThenInclude(p => p.Profesor)
+            .ThenInclude(p => p.Usuario)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
 
@@ -53,5 +58,26 @@ public class EquipoRepository : IEquipoRepository
             .Where(e => e.ProyectoId == proyectoId)
             .AsNoTracking()
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Equipo>> GetByUsuarioIdAsync(int usuarioId, string role)
+    {
+        var query = _context.Equipos
+            .Include(e => e.Miembros)
+                .ThenInclude(m => m.Estudiante)
+                    .ThenInclude(e => e.Usuario)
+            .Include(e => e.LiderEstudiante)
+                .ThenInclude(e => e!.Usuario)
+            .Include(e => e.Proyecto)
+                .ThenInclude(p => p.Profesor)
+                    .ThenInclude(p => p.Usuario)
+            .AsNoTracking();
+
+        return role switch
+        {
+            "Administrador" => await query.ToListAsync(),
+            "Profesor" => await query.Where(e => e.Proyecto.Profesor.UsuarioId == usuarioId).ToListAsync(),
+            _ => await query.Where(e => e.Miembros.Any(m => m.Estudiante.UsuarioId == usuarioId)).ToListAsync()
+        };
     }
 }

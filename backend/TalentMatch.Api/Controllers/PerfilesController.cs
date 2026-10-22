@@ -20,7 +20,9 @@ public class PerfilesController : ControllerBase
     [HttpGet("{usuarioId:int}")]
     public async Task<IActionResult> GetByUsuarioId(int usuarioId)
     {
-        var perfil = await _perfilService.GetByUsuarioIdAsync(usuarioId);
+        var currentUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        var perfil = await _perfilService.GetByUsuarioIdAsync(usuarioId, currentUserId, currentUserRole);
         return perfil is null ? NotFound() : Ok(perfil);
     }
 

@@ -24,4 +24,6 @@ public class Estudiante
     public ICollection<Postulacion> Postulaciones { get; set; } = new List<Postulacion>();
     public ICollection<Recomendacion> Recomendaciones { get; set; } = new List<Recomendacion>();
     public ICollection<MiembroEquipo> MiembrosEquipo { get; set; } = new List<MiembroEquipo>();
+    public ICollection<Equipo> EquiposLiderados { get; set; } = new List<Equipo>();
+    public ICollection<Proyecto> ProyectosCreados { get; set; } = new List<Proyecto>();
 }

@@ -17,6 +17,13 @@ public class UsuariosController : ControllerBase
         _usuarioService = usuarioService;
     }
 
+    [HttpGet("estudiantes/busqueda")]
+    [Authorize(Roles = "Estudiante,Profesor,Administrador")]
+    public async Task<IActionResult> SearchStudents([FromQuery] string? search, [FromQuery] string? skill, [FromQuery] string? interest, [FromQuery] string? availability, [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
+    {
+        return Ok(await _usuarioService.SearchStudentsAsync(search, skill, interest, availability, page, pageSize));
+    }
+
     [HttpGet]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> GetAll()
@@ -37,8 +44,24 @@ public class UsuariosController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CrearUsuarioDto dto)
     {
-        var usuario = await _usuarioService.CreateAsync(dto);
+        var usuario = await _usuarioService.RegisterAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = usuario.Id }, usuario);
+    }
+
+    [HttpPost("administrativo")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> CreateAdministrative([FromBody] CrearUsuarioAdministrativoDto dto)
+    {
+        var usuario = await _usuarioService.CreateAdministrativeAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = usuario.Id }, usuario);
+    }
+
+    [HttpPut("{id:int}/rol-profesor")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> AssignProfessor(int id)
+    {
+        var usuario = await _usuarioService.AssignProfessorAsync(id);
+        return Ok(usuario);
     }
 
     [HttpPut("{id:int}")]

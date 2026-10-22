@@ -19,7 +19,9 @@ public class RecomendacionesController : ControllerBase
     [HttpGet("proyectos/{proyectoId:int}")]
     public async Task<IActionResult> GetRecomendacionesPorProyecto(int proyectoId)
     {
-        var recomendaciones = await _recomendacionService.GetRecomendacionesPorProyectoAsync(proyectoId);
+        var currentUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        var recomendaciones = await _recomendacionService.GetRecomendacionesPorProyectoAsync(proyectoId, currentUserId, currentUserRole);
         return Ok(recomendaciones);
     }
 }

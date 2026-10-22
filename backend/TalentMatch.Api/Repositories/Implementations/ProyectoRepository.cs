@@ -31,6 +31,12 @@ public class ProyectoRepository : IProyectoRepository
             .ThenInclude(ph => ph.Habilidad)
             .Include(p => p.ProyectoIntereses)
             .ThenInclude(pi => pi.Interes)
+            .Include(p => p.CreadorEstudiante)
+            .ThenInclude(e => e!.Usuario)
+            .Include(p => p.Equipos)
+            .ThenInclude(e => e.Miembros)
+            .Include(p => p.Equipos)
+            .ThenInclude(e => e.LiderEstudiante)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 

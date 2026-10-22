@@ -10,4 +10,5 @@ public interface IUsuarioRepository
     Task AddAsync(Usuario usuario);
     Task UpdateAsync(Usuario usuario);
     Task DeleteAsync(int id);
+    Task<(IReadOnlyCollection<Usuario> Items, int Total)> SearchStudentsAsync(string? search, string? skill, string? interest, string? availability, int page, int pageSize);
 }

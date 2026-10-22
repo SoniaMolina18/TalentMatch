@@ -16,5 +16,4 @@ public class CrearProyectoDto
     [Range(1, int.MaxValue)]
     public int CuposDisponibles { get; set; }
 
-    public int ProfesorId { get; set; }
 }

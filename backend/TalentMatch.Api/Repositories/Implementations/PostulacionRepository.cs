@@ -56,6 +56,9 @@ public class PostulacionRepository : IPostulacionRepository
     {
         return await _context.Postulaciones
             .Where(p => p.EstudianteId == estudianteId)
+            .Include(p => p.Estudiante)
+            .ThenInclude(e => e.Usuario)
+            .Include(p => p.Proyecto)
             .ToListAsync();
     }
 

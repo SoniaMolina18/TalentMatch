@@ -10,4 +10,6 @@ public interface IProyectoService
     Task<ProyectoResponseDto> UpdateAsync(int id, ActualizarProyectoDto dto, int currentUserId, string currentUserRole);
     Task DeleteAsync(int id, int currentUserId, string currentUserRole);
     Task<IEnumerable<ProyectoResponseDto>> SearchAsync(string? titulo, string? descripcion);
+    Task<ProyectoColaborativoResponseDto> CreateCollaborativeAsync(CrearProyectoColaborativoDto dto, int currentUserId, string currentUserRole);
+    Task<IEnumerable<ProyectoColaborativoResponseDto>> GetMyCollaborativeAsync(int currentUserId, string currentUserRole);
 }

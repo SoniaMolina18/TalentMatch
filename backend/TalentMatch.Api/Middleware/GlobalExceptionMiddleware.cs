@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using TalentMatch.Api.Exceptions;
 
 namespace TalentMatch.Api.Middleware;
 
@@ -28,11 +29,13 @@ public class GlobalExceptionMiddleware
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+        private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         var statusCode = exception switch
         {
+            // Manejar ambas variantes de TalentMatchException (namespace Exceptions y Domain.Exceptions)
             TalentMatchException ex => ex.StatusCode,
+            TalentMatch.Api.Domain.Exceptions.TalentMatchException dex => dex.StatusCode,
             ArgumentException => StatusCodes.Status400BadRequest,
             InvalidOperationException => StatusCodes.Status400BadRequest,
             UnauthorizedAccessException => StatusCodes.Status401Unauthorized,

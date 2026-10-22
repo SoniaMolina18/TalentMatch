@@ -14,6 +14,9 @@ public class Equipo
     public int ProyectoId { get; set; }
     public Proyecto Proyecto { get; set; } = null!;
 
+    public int? LiderEstudianteId { get; set; }
+    public Estudiante? LiderEstudiante { get; set; }
+
     public EstadoEquipo Estado { get; set; } = EstadoEquipo.Activo;
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;

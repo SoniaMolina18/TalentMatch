@@ -17,15 +17,22 @@ public class Proyecto
 
     public EstadoProyecto Estado { get; set; } = EstadoProyecto.Abierto;
 
+    public TipoProyecto Tipo { get; set; } = TipoProyecto.AcademicoProfesor;
+
+    public int? CreadorEstudianteId { get; set; }
+    public Estudiante? CreadorEstudiante { get; set; }
+
+    [MaxLength(2000)]
+    public string? Objetivo { get; set; }
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
-    [Required]
-    public DateTime FechaLimite { get; set; }
+    public DateTime? FechaLimite { get; set; }
 
     public int CuposDisponibles { get; set; }
 
-    public int ProfesorId { get; set; }
-    public Profesor Profesor { get; set; } = null!;
+    public int? ProfesorId { get; set; }
+    public Profesor? Profesor { get; set; }
 
     public ICollection<ProyectoHabilidad> ProyectoHabilidades { get; set; } = new List<ProyectoHabilidad>();
     public ICollection<ProyectoInteres> ProyectoIntereses { get; set; } = new List<ProyectoInteres>();

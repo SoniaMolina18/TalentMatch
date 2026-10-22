@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 using TalentMatch.Api.Data;
 using TalentMatch.Api.Domain.Entities;
 using TalentMatch.Api.Domain.Enums;
@@ -76,6 +78,114 @@ public class UsuarioService : IUsuarioService
         return MapToResponseDto(usuario);
     }
 
+    public async Task<UsuarioResponseDto> CreateAdministrativeAsync(CrearUsuarioAdministrativoDto dto)
+    {
+        ValidateAdministrativeInput(dto);
+        await ValidateUniqueEmailAsync(dto.Correo);
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var role = dto.Rol.Trim() switch
+            {
+                "Estudiante" => RolUsuario.Estudiante,
+                "Profesor" => RolUsuario.Profesor,
+                _ => throw new TalentMatchException("Solo se pueden crear usuarios Estudiante o Profesor.", 400)
+            };
+
+            var usuario = new Usuario
+            {
+                Nombre = dto.Nombre.Trim(),
+                Apellido = dto.Apellido.Trim(),
+                Correo = dto.Correo.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Rol = role,
+                Activo = true,
+                FechaRegistro = DateTime.UtcNow
+            };
+
+            await _context.Usuarios.AddAsync(usuario);
+            await _context.SaveChangesAsync();
+
+            if (role == RolUsuario.Estudiante)
+            {
+                _context.Estudiantes.Add(new Estudiante
+                {
+                    UsuarioId = usuario.Id,
+                    CodigoEstudiante = $"EST-{usuario.Id:D6}",
+                    Carrera = "No especificada",
+                    Semestre = 1
+                });
+            }
+            else
+            {
+                _context.Profesores.Add(new Profesor
+                {
+                    UsuarioId = usuario.Id,
+                    CodigoProfesor = $"PRO-{usuario.Id:D6}",
+                    Facultad = "No especificada"
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return MapToResponseDto(usuario);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<UsuarioResponseDto> AssignProfessorAsync(int usuarioId)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(usuarioId)
+            ?? throw new TalentMatchException("Usuario no encontrado.", 404);
+
+        if (usuario.Rol == RolUsuario.Administrador)
+            throw new TalentMatchException("No se puede convertir un Administrador en Profesor.", 400);
+
+        usuario.Rol = RolUsuario.Profesor;
+        await _usuarioRepository.UpdateAsync(usuario);
+
+        var profesor = await _context.Profesores.FirstOrDefaultAsync(p => p.UsuarioId == usuario.Id);
+        if (profesor is null)
+        {
+            _context.Profesores.Add(new Profesor
+            {
+                UsuarioId = usuario.Id,
+                CodigoProfesor = $"PRO-{usuario.Id:D6}",
+                Facultad = "No especificada"
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        return MapToResponseDto(usuario);
+    }
+
+    private static void ValidateAdministrativeInput(CrearUsuarioAdministrativoDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nombre) || dto.Nombre.Trim().Length > 100
+            || string.IsNullOrWhiteSpace(dto.Apellido) || dto.Apellido.Trim().Length > 100)
+            throw new TalentMatchException("Nombre y apellido son obligatorios y no pueden superar 100 caracteres.", 400);
+
+        if (string.IsNullOrWhiteSpace(dto.Correo) || dto.Correo.Trim().Length > 200
+            || !new EmailAddressAttribute().IsValid(dto.Correo.Trim()))
+            throw new TalentMatchException("El correo electrónico no es válido.", 400);
+
+        if (string.IsNullOrWhiteSpace(dto.Password)
+            || dto.Password.Length < 8
+            || !dto.Password.Any(char.IsUpper)
+            || !dto.Password.Any(char.IsLower)
+            || !dto.Password.Any(char.IsDigit)
+            || dto.Password.All(char.IsLetterOrDigit))
+            throw new TalentMatchException("La contraseña debe tener al menos 8 caracteres, mayúscula, minúscula, número y símbolo.", 400);
+
+        if (dto.Rol.Trim() is not ("Estudiante" or "Profesor"))
+            throw new TalentMatchException("Solo se pueden crear usuarios Estudiante o Profesor.", 400);
+    }
+
     public async Task<UsuarioResponseDto> UpdateAsync(int id, ActualizarUsuarioDto dto, int currentUserId, string currentUserRole)
     {
         if (id != currentUserId && currentUserRole != "Administrador")
@@ -108,7 +218,37 @@ public class UsuarioService : IUsuarioService
 
     public async Task<UsuarioResponseDto> RegisterAsync(CrearUsuarioDto dto)
     {
+        if (!string.Equals(dto.Rol?.Trim(), "Estudiante", StringComparison.OrdinalIgnoreCase))
+            throw new TalentMatchException("El registro público solo permite el rol Estudiante.", 400);
+
+        dto.Rol = "Estudiante";
         return await CreateAsync(dto);
+    }
+
+    public async Task<BusquedaEstudiantesDto> SearchStudentsAsync(string? search, string? skill, string? interest, string? availability, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        var (items, total) = await _usuarioRepository.SearchStudentsAsync(search, skill, interest, availability, page, pageSize);
+        return new BusquedaEstudiantesDto
+        {
+            Page = page,
+            PageSize = pageSize,
+            Total = total,
+            Items = items.Where(u => u.Estudiante is not null).Select(u => new EstudianteTalentoDto
+            {
+                EstudianteId = u.Estudiante!.Id,
+                UsuarioId = u.Id,
+                Nombre = u.Nombre,
+                Apellido = u.Apellido,
+                Carrera = u.Estudiante.Carrera,
+                Semestre = u.Estudiante.Semestre,
+                Descripcion = u.Perfil?.Descripcion,
+                Disponibilidad = u.Perfil?.Disponibilidad,
+                Habilidades = u.Estudiante.EstudianteHabilidades.Select(eh => eh.Habilidad.Nombre).ToArray(),
+                Intereses = u.Estudiante.EstudianteIntereses.Select(ei => ei.Interes.Nombre).ToArray()
+            }).ToArray()
+        };
     }
 
     private static RolUsuario ParseRol(string rol)

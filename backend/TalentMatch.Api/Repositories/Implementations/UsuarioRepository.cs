@@ -18,6 +18,7 @@ public class UsuarioRepository : IUsuarioRepository
     {
         return await _context.Usuarios
             .AsNoTracking()
+            .Include(u => u.Perfil)
             .Include(u => u.Estudiante)
             .ThenInclude(e => e!.EstudianteHabilidades)
             .ThenInclude(eh => eh.Habilidad)
@@ -64,5 +65,29 @@ public class UsuarioRepository : IUsuarioRepository
             _context.Usuarios.Remove(usuario);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<(IReadOnlyCollection<Usuario> Items, int Total)> SearchStudentsAsync(string? search, string? skill, string? interest, string? availability, int page, int pageSize)
+    {
+        IQueryable<Usuario> query = _context.Usuarios.AsNoTracking().Where(u => u.Activo && u.Estudiante != null)
+            .Include(u => u.Perfil)
+            .Include(u => u.Estudiante!).ThenInclude(e => e.EstudianteHabilidades).ThenInclude(eh => eh.Habilidad)
+            .Include(u => u.Estudiante!).ThenInclude(e => e.EstudianteIntereses).ThenInclude(ei => ei.Interes);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var value = search.Trim();
+            query = query.Where(u => u.Nombre.Contains(value) || u.Apellido.Contains(value) || u.Estudiante!.Carrera.Contains(value));
+        }
+        if (!string.IsNullOrWhiteSpace(skill))
+            query = query.Where(u => u.Estudiante!.EstudianteHabilidades.Any(eh => eh.Habilidad.Nombre.Contains(skill.Trim())));
+        if (!string.IsNullOrWhiteSpace(interest))
+            query = query.Where(u => u.Estudiante!.EstudianteIntereses.Any(ei => ei.Interes.Nombre.Contains(interest.Trim())));
+        if (!string.IsNullOrWhiteSpace(availability))
+            query = query.Where(u => u.Perfil != null && u.Perfil.Disponibilidad != null && u.Perfil.Disponibilidad.Contains(availability.Trim()));
+
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(u => u.Apellido).ThenBy(u => u.Nombre).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return (items, total);
     }
 }

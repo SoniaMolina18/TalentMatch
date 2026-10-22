@@ -19,15 +19,22 @@ public class RecomendacionService : IRecomendacionService
         _recomendacionRepository = recomendacionRepository;
     }
 
-    public async Task<IEnumerable<RecomendacionResponseDto>> GetRecomendacionesPorProyectoAsync(int proyectoId)
+    public async Task<IEnumerable<RecomendacionResponseDto>> GetRecomendacionesPorProyectoAsync(int proyectoId, int currentUserId, string currentUserRole)
     {
         var proyecto = await _proyectoRepository.GetByIdAsync(proyectoId)
             ?? throw new TalentMatchException("Proyecto no encontrado.", 404);
 
+        if (proyecto.Tipo == Domain.Enums.TipoProyecto.ColaborativoEstudiante && proyecto.CreadorEstudiante?.UsuarioId != currentUserId)
+            throw new TalentMatchException("Solo el creador puede consultar el match de este proyecto.", 403);
+        if (proyecto.Tipo == Domain.Enums.TipoProyecto.AcademicoProfesor && currentUserRole != "Administrador" && proyecto.Profesor?.UsuarioId != currentUserId)
+            throw new TalentMatchException("No tienes permisos para consultar el match de este proyecto.", 403);
+
+        var miembros = proyecto.Equipos.SelectMany(e => e.Miembros).Select(m => m.EstudianteId).ToHashSet();
+        if (proyecto.CreadorEstudianteId is not null) miembros.Add(proyecto.CreadorEstudianteId.Value);
         var estudiantes = await _usuarioRepository.GetAllAsync();
         var estudiantesCompatibles = new List<RecomendacionResponseDto>();
 
-        foreach (var usuario in estudiantes.Where(u => u.Rol == Domain.Enums.RolUsuario.Estudiante))
+        foreach (var usuario in estudiantes.Where(u => u.Rol == Domain.Enums.RolUsuario.Estudiante && u.Estudiante is not null && !miembros.Contains(u.Estudiante.Id)))
         {
             if (usuario.Estudiante is null)
                 continue;
@@ -48,6 +55,18 @@ public class RecomendacionService : IRecomendacionService
                 .Select(x => x.InteresId)
                 .ToHashSet();
 
+            var habilidadesCoincidentes = usuario.Estudiante.EstudianteHabilidades
+                .Where(x => proyectoSkills.Contains(x.HabilidadId))
+                .Select(x => x.Habilidad.Nombre)
+                .Distinct()
+                .ToArray();
+
+            var interesesCoincidentes = usuario.Estudiante.EstudianteIntereses
+                .Where(x => proyectoIntereses.Contains(x.InteresId))
+                .Select(x => x.Interes.Nombre)
+                .Distinct()
+                .ToArray();
+
             var porcentajeHabilidades = proyectoSkills.Count == 0
                 ? 0m
                 : estudianteSkills.Intersect(proyectoSkills).Count() * 100m / proyectoSkills.Count;
@@ -61,9 +80,14 @@ public class RecomendacionService : IRecomendacionService
 
             estudiantesCompatibles.Add(new RecomendacionResponseDto
             {
-                EstudianteId = usuario.Id,
+                EstudianteId = usuario.Estudiante.Id,
                 Nombre = $"{usuario.Nombre} {usuario.Apellido}",
-                PorcentajeCompatibilidad = compatibilidadNormalizada
+                Carrera = usuario.Estudiante.Carrera,
+                Semestre = usuario.Estudiante.Semestre,
+                Disponibilidad = usuario.Perfil?.Disponibilidad,
+                PorcentajeCompatibilidad = compatibilidadNormalizada,
+                HabilidadesCoincidentes = habilidadesCoincidentes,
+                InteresesCoincidentes = interesesCoincidentes
             });
         }
 

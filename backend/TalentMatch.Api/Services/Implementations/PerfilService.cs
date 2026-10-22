@@ -17,8 +17,11 @@ public class PerfilService : IPerfilService
         _usuarioRepository = usuarioRepository;
     }
 
-    public async Task<PerfilResponseDto?> GetByUsuarioIdAsync(int usuarioId)
+    public async Task<PerfilResponseDto?> GetByUsuarioIdAsync(int usuarioId, int currentUserId, string currentUserRole)
     {
+        if (usuarioId != currentUserId && currentUserRole != "Administrador")
+            throw new TalentMatchException("Solo puedes consultar tu propio perfil, salvo el Administrador.", 403);
+
         var perfil = await _perfilRepository.GetByUsuarioIdAsync(usuarioId);
         if (perfil is null) return null;
 

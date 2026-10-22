@@ -4,5 +4,5 @@ namespace TalentMatch.Api.Services.Interfaces;
 
 public interface IRecomendacionService
 {
-    Task<IEnumerable<RecomendacionResponseDto>> GetRecomendacionesPorProyectoAsync(int proyectoId);
+    Task<IEnumerable<RecomendacionResponseDto>> GetRecomendacionesPorProyectoAsync(int proyectoId, int currentUserId, string currentUserRole);
 }

@@ -8,8 +8,11 @@ public class ProyectoResponseDto
     public string Titulo { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
     public EstadoProyecto Estado { get; set; }
+    public TipoProyecto Tipo { get; set; }
+    public int? CreadorEstudianteId { get; set; }
+    public string? Objetivo { get; set; }
     public DateTime FechaCreacion { get; set; }
-    public DateTime FechaLimite { get; set; }
+    public DateTime? FechaLimite { get; set; }
     public int CuposDisponibles { get; set; }
-    public int ProfesorId { get; set; }
+    public int? ProfesorId { get; set; }
 }
